@@ -1,21 +1,20 @@
 package com.example.amyge.watertracker;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
-    private static WaterCount waterCount;
+    private static int waterCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,14 +22,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         initializeWaterCount();
-        Calendar calendar = getMidnightCalendar();
-        Context context = getApplicationContext();
-
-        PendingIntent pendingIntent = PendingIntent.getService(context, 0,
-                new Intent(context, WaterCount.class),PendingIntent.FLAG_UPDATE_CURRENT);
-        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        am.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(),
-                AlarmManager.INTERVAL_DAY, pendingIntent);
     }
 
     @Override
@@ -39,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
 
         SharedPreferences.Editor prefsEditor = prefs.edit();
         prefsEditor.putString("waterCount", String.valueOf(waterCount)).apply();
+        prefsEditor.putString("lastUpdated", getCurrentDateString()).apply();
     }
 
     // Used to load the 'native-lib' library on application startup.
@@ -49,25 +41,20 @@ public class MainActivity extends AppCompatActivity {
     private void initializeWaterCount() {
         prefs = getSharedPreferences("waterTracker", 0);
         String countString = prefs.getString("waterCount", "0");
+        String lastUpdatedString = prefs.getString("lastUpdated", "1970-01-01");
 
-        if (countString.equals("")) {
+        if (!getCurrentDateString().equals(lastUpdatedString)) {
             countString = "0";
         }
 
-        waterCount = new WaterCount(Integer.valueOf(countString));
+        waterCount = Integer.valueOf(countString);
         updateWaterCountDisplay();
     }
-    private Calendar getMidnightCalendar() {
 
-        Calendar calendar = Calendar.getInstance();
-
-        calendar.setTimeInMillis(System.currentTimeMillis());
-        calendar.set(Calendar.HOUR_OF_DAY, 23);
-        calendar.set(Calendar.MINUTE, 59);
-        calendar.set(Calendar.SECOND, 59);
-        calendar.set(Calendar.MILLISECOND, 0);
-
-        return calendar;
+    private String getCurrentDateString(){
+        Date today = Calendar.getInstance().getTime();
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        return df.format(today);
     }
 
     public void addToWaterCount(View view){
@@ -75,23 +62,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void removeFromWaterCount(View view){
-        modifyWaterCount(-1);
+        if (waterCount > 0) {
+            modifyWaterCount(-1);
+        }
     }
 
     private void modifyWaterCount(int amount){
-        waterCount.setValue(amount);
+        waterCount += amount;
+
         updateWaterCountDisplay();
 
-        if (waterCount.value() >= 8){
+        if (waterCount >= 8){
             displaySuccessMessage();
-        } else if (waterCount.value() == 7){
+        } else if (waterCount == 7){
             hideSuccessMessage();
         }
     }
 
     private void updateWaterCountDisplay() {
         TextView textView = (TextView) findViewById(R.id.waterDisplay);
-        textView.setText(String.valueOf(waterCount.value()));
+        textView.setText(String.valueOf(waterCount));
     }
 
     private void displaySuccessMessage(){
