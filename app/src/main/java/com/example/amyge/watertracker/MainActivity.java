@@ -33,11 +33,6 @@ public class MainActivity extends AppCompatActivity {
         prefsEditor.putString("lastUpdated", getCurrentDateString()).apply();
     }
 
-    // Used to load the 'native-lib' library on application startup.
-    static {
-        System.loadLibrary("native-lib");
-    }
-
     private void initializeWaterCount() {
         prefs = getSharedPreferences("waterTracker", 0);
         String countString = prefs.getString("waterCount", "0");
